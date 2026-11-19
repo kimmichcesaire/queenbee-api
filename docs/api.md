@@ -99,6 +99,19 @@ Corps (JSON, en-tête `Content-Type: application/json`)
 - Obligatoires : `timestamp` (date ISO 8601), `weight_kg` (nombre).
 - Facultatifs : `hive_id` (s'il est présent, il doit être égal à `id`), `site_id`, `position_lat`, `position_lon`, `temp_internal_c`, `temp_external_c`, `humidity_pct`, `acoustic_activity_score`, `battery_pct`.
 
+Plages physiques (UC-CY02) : chaque champ présent doit être un nombre compris dans sa plage, bornes incluses.
+
+| Champ | Minimum | Maximum |
+|-------|---------|---------|
+| `position_lat` | -90 | 90 |
+| `position_lon` | -180 | 180 |
+| `weight_kg` | 0 | 150 |
+| `temp_internal_c` | -10 | 60 |
+| `temp_external_c` | -20 | 60 |
+| `humidity_pct` | 0 | 100 |
+| `acoustic_activity_score` | 0 | 1 |
+| `battery_pct` | 0 | 100 |
+
 201 : la mesure enregistrée.
 ```json
 {
@@ -111,13 +124,13 @@ Corps (JSON, en-tête `Content-Type: application/json`)
 }
 ```
 
-400 : `timestamp` ou `weight_kg` manquant, ou `hive_id` du corps différent de celui du chemin.
+400 : `timestamp` ou `weight_kg` manquant, `hive_id` du corps différent de celui du chemin, ou champ hors de sa plage physique (ou qui n'est pas un nombre).
 ```json
 {
   "type": "about:blank",
   "title": "Requête invalide",
   "status": 400,
-  "detail": "Les champs timestamp et weight_kg sont obligatoires."
+  "detail": "Le champ weight_kg doit être un nombre compris entre 0 et 150 (reçu : 500)."
 }
 ```
 
