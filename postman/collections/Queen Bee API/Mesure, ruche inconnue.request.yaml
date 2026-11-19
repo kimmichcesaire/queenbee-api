@@ -1,0 +1,31 @@
+$kind: http-request
+url: "{{baseUrl}}/api/hives/XX-NOPE-999/measures"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"hive_id\": \"SN-CASA-001\",\r
+
+    \  \"site_id\": \"SN-CASA\",\r
+
+    \  \"timestamp\": \"2026-10-31T10:00:00Z\",\r
+
+    \  \"position_lat\": 12.5743,\r
+
+    \  \"position_lon\": -16.2873,\r
+
+    \  \"weight_kg\": 36.84,\r
+
+    \  \"temp_internal_c\": 34.4,\r
+
+    \  \"temp_external_c\": 27.1,\r
+
+    \  \"humidity_pct\": 64,\r
+
+    \  \"acoustic_activity_score\": 0.42,\r
+
+    \  \"battery_pct\": 88\r
+
+    }"
+order: 8000

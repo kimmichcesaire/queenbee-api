@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/hives/SN-CASA-001/measures"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"hive_id\": \"SN-CASA-001\",\r
+
+    \  \"weight_kg\": 36.84\r
+
+    }"
+order: 7000
