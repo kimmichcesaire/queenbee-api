@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { hives, measures } from "../data/hives.js";
+import { sendProblem } from "../utils/problem.js";
 
 export const hivesRouter = Router();
 
-// GET /api/hives            
-// GET /api/hives?site_id=X  
+// GET /api/hives           
+// GET /api/hives?site_id=X 
 hivesRouter.get("/", (req, res) => {
   const { site_id } = req.query;
 
@@ -20,7 +21,7 @@ hivesRouter.get("/:id", (req, res) => {
   const hive = hives.find((h) => h.id === req.params.id);
 
   if (!hive) {
-    return res.status(404).json({ error: `Aucune ruche ne porte l'identifiant ${req.params.id}.` });
+    return sendProblem(res, 404, `Aucune ruche ne porte l'identifiant ${req.params.id}.`);
   }
 
   res.json(hive);
@@ -30,17 +31,17 @@ hivesRouter.get("/:id", (req, res) => {
 hivesRouter.post("/:id/measures", (req, res) => {
   const hive = hives.find((h) => h.id === req.params.id);
   if (!hive) {
-    return res.status(404).json({ error: `Aucune ruche ne porte l'identifiant ${req.params.id}.` });
+    return sendProblem(res, 404, `Aucune ruche ne porte l'identifiant ${req.params.id}.`);
   }
 
   const body = req.body ?? {};
 
   if (body.timestamp === undefined || body.weight_kg === undefined) {
-    return res.status(400).json({ error: "Les champs timestamp et weight_kg sont obligatoires." });
+    return sendProblem(res, 400, "Les champs timestamp et weight_kg sont obligatoires.");
   }
 
   if (body.hive_id !== undefined && body.hive_id !== hive.id) {
-    return res.status(400).json({ error: `Le hive_id du corps (${body.hive_id}) ne correspond pas à celui du chemin (${hive.id}).` });
+    return sendProblem(res, 400, `Le hive_id du corps (${body.hive_id}) ne correspond pas à celui du chemin (${hive.id}).`);
   }
 
   const measure = { ...body, hive_id: hive.id };

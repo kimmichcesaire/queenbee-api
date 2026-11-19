@@ -1,6 +1,7 @@
 import express from "express";
 import { hivesRouter } from "./routes/hives.router.js";
 import { requestLogger } from "./middlewares/requestLogger.js";
+import { notFoundHandler, errorHandler } from "./middlewares/errorHandler.js";
 
 export const app = express();
 
@@ -17,3 +18,7 @@ app.get("/health", (req, res) => {
 
 
 app.use("/api/hives", hivesRouter);
+
+
+app.use(notFoundHandler);
+app.use(errorHandler);
