@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/nimportequoi"
+method: GET
+order: 14000

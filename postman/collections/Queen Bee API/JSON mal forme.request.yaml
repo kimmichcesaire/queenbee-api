@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{baseUrl}}/api/hives/SN-CASA-001/measures"
+method: POST
+body:
+  type: json
+  content: "{oops"
+order: 15000

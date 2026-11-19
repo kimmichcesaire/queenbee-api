@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/hives/SN-CASA-001/measures?limit=0"
+method: GET
+queryParams:
+  limit: "0"
+order: 10000
