@@ -8,14 +8,13 @@ export const app = express();
 // Journal : déclaré en premier pour mesurer toute la requête.
 app.use(requestLogger);
 
-
+// Transforme le corps JSON des requêtes en objet dans req.body (avant les routes).
 app.use(express.json());
 
 // Route de santé
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
-
 
 app.use("/api/hives", hivesRouter);
 

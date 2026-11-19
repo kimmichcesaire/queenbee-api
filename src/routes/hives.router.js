@@ -1,11 +1,19 @@
 import { Router } from "express";
-import { hives, measures } from "../data/hives.js";
+import { hives, measures, inspections } from "../data/hives.js";
 import { sendProblem } from "../utils/problem.js";
 
 export const hivesRouter = Router();
 
-// GET /api/hives           
-// GET /api/hives?site_id=X 
+
+function parseIntParam(value, defaut, min, max) {
+  if (value === undefined) return defaut;
+  if (!/^\d+$/.test(value)) return null; // que des chiffres
+  const n = Number(value);
+  if (n < min || n > max) return null;
+  return n;
+}
+
+// GET /api/hives
 hivesRouter.get("/", (req, res) => {
   const { site_id } = req.query;
 
@@ -16,7 +24,7 @@ hivesRouter.get("/", (req, res) => {
   res.json(hives.filter((hive) => hive.site_id === site_id));
 });
 
-// GET /api/hives/:id 
+
 hivesRouter.get("/:id", (req, res) => {
   const hive = hives.find((h) => h.id === req.params.id);
 
@@ -48,4 +56,30 @@ hivesRouter.post("/:id/measures", (req, res) => {
   measures.push(measure);
 
   res.status(201).json(measure);
+});
+
+// GET /api/hives/:id/measures?limit=50&offset=0 
+hivesRouter.get("/:id/measures", (req, res) => {
+  const hive = hives.find((h) => h.id === req.params.id);
+  if (!hive) {
+    return sendProblem(res, 404, `Aucune ruche ne porte l'identifiant ${req.params.id}.`);
+  }
+
+  const limit = parseIntParam(req.query.limit, 50, 1, 500);
+  if (limit === null) {
+    return sendProblem(res, 400, "Le paramètre limit doit être un entier compris entre 1 et 500.");
+  }
+
+  const offset = parseIntParam(req.query.offset, 0, 0, Number.MAX_SAFE_INTEGER);
+  if (offset === null) {
+    return sendProblem(res, 400, "Le paramètre offset doit être un entier positif ou nul.");
+  }
+
+  const items = measures
+    .filter((m) => m.hive_id === hive.id)
+
+    .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))
+    .slice(offset, offset + limit); 
+
+  res.json({ items, limit, offset });
 });
