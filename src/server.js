@@ -1,7 +1,8 @@
-import { app } from "./app.js"; 
+import { config } from "./config.js";
+import { createApp } from "./app.js";
 
-const PORT = 3000;
+const app = createApp();
 
-app.listen(PORT, () => {
-  console.log(`API Queen Bee sur http://localhost:${PORT}`);
+app.listen(config.port, () => {
+  console.log(`API Queen Bee sur http://localhost:${config.port} (${config.nodeEnv})`);
 });
