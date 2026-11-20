@@ -1,12 +1,12 @@
 # Queen Bee — API
 
-API de suivi des ruches (module Node.js). État : **API v0, jour 1** (données en mémoire).
+API de suivi des ruches (module Node.js). État : **jour 2 en cours** (données dans PostgreSQL).
 
 ## Démarrage
 
 ```powershell
-docker compose up -d                 # base PostgreSQL (utilisée à partir du jour 2)
-copy .env.example .env               # puis remplir les valeurs
+docker compose up -d                 # base PostgreSQL
+copy .env.example .env               # puis remplir les valeurs (DB_PASSWORD…)
 npm install
 npm run dev                          # http://localhost:3000
 npm test                             # tests (node:test)
@@ -14,24 +14,48 @@ npm test                             # tests (node:test)
 
 - Contrat de l'API : [docs/api.md](docs/api.md)
 - Collection Postman : `postman/collections/Queen Bee API/` (variable `baseUrl` = `http://localhost:3000`)
+- Stockage : `STORAGE=postgres` (par défaut) ou `STORAGE=memory` (ruches du jour 1) dans `.env`
 
-## Organisation du code (TP 4)
+## Organisation du code
 
 ```
 src/
-  app.js, server.js, config.js, errors.js
-  routes/hives/          routeur : URL et verbe
-  controllers/           lit la requête, écrit la réponse
-  services/              règles métier (validation, plages physiques)
-  repositories/memory/   données en mémoire (remplacées par PostgreSQL au jour 2)
-  middlewares/           journal des requêtes, erreurs RFC 9457
-  utils/problem.js       format d'erreur RFC 9457
-test/                    tests unitaires des services
+  app.js, server.js, config.js, errors.js, db.js
+  routes/hives/            routeur : URL et verbe
+  controllers/             lit la requête, écrit la réponse
+  services/                règles métier (validation, plages physiques)
+  repositories/memory/     données en mémoire (jour 1)
+  repositories/postgres/   requêtes SQL paramétrées (jour 2)
+  middlewares/             journal des requêtes, erreurs RFC 9457
+  utils/problem.js         format d'erreur RFC 9457
+test/                      tests unitaires des services
+scripts/import-measures.js import en masse (TP 5)
 ```
 
-## État du jour 1
+## TP 5 — Brancher PostgreSQL
 
-Toutes les étapes des TP 1 à 4 sont faites. Rien ne manque.
+Import de la journée du 31 octobre (4 800 mesures), sur mon poste (Windows, base dans Docker Desktop) :
+
+| Mode          | Durée       |
+|---------------|-------------|
+| ligne à ligne | 176 791 ms  |
+| par lot       | 496 ms      |
+
+### 1. Quel temps obtenez-vous dans chaque mode ? D'où vient l'écart ?
+
+Environ 3 minutes ligne à ligne, contre une demi-seconde par lot (environ 350 fois plus rapide). Ligne à ligne, il y a 4 800 allers-retours avec la base et 4 800 validations, chacune écrite sur disque ; par lot, il n'y a que 5 requêtes et une seule validation (COMMIT) à la fin.
+
+### 2. Si la 2 001e mesure provoquait une erreur, que resterait-il en base dans chaque mode ?
+
+Ligne à ligne, les 2 000 premières mesures resteraient en base, car chacune a été validée séparément : la journée serait à moitié importée. Par lot, il ne resterait rien : l'erreur déclenche un ROLLBACK qui annule toute la transaction, y compris les lots déjà insérés.
+
+### 3. Pourquoi la transaction emprunte-t-elle une connexion avec `pool.connect()` au lieu d'appeler `pool.query()` ?
+
+Une transaction appartient à une seule connexion : BEGIN, les INSERT et COMMIT doivent passer par la même. `pool.query()` prend à chaque appel n'importe quelle connexion libre, donc les INSERT pourraient partir sur une autre connexion que le BEGIN, hors de la transaction.
+
+### 4. Que se passerait-il si `client.release()` n'était pas dans le `finally`, et qu'une erreur survenait dix fois de suite ?
+
+À chaque erreur, la connexion empruntée ne serait jamais rendue au pool (fuite de connexions). Après dix erreurs, les dix connexions du pool (`DB_POOL_MAX=10`) seraient toutes perdues : la requête suivante attendrait une connexion libre, puis échouerait au bout de 5 secondes (`connectionTimeoutMillis`), et toute l'API serait bloquée.
 
 ## TP 1 — Lire les mesures sans bloquer
 

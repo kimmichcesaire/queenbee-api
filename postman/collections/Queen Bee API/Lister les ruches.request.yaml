@@ -1,4 +1,8 @@
 $kind: http-request
 url: "{{baseUrl}}/api/hives"
 method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Nombre d'éléments : \" + pm.response.json().length, () => {});\r\n"
+    language: text/javascript
 order: 2000
