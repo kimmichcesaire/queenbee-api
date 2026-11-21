@@ -31,8 +31,8 @@ export const measureSchema = Joi.object({
 
 export const COLONY_STATUSES = ["forte", "normale", "faible", "morte"];
 
-// Inspection saisie dans l'application mobile. L'id (UUID) est choisi par l'application.
-export const inspectionSchema = Joi.object({
+// Les champs d'une inspection, sortis dans un objet pour servir aux deux schémas.
+const inspectionFields = {
   id: Joi.string().guid().required(),
   hive_id: Joi.string(),
   inspected_at: Joi.date().iso().max("now").required()
@@ -40,6 +40,23 @@ export const inspectionSchema = Joi.object({
   colony_status: Joi.string().valid(...COLONY_STATUSES).required(),
   queen_present: Joi.boolean().allow(null),
   observations: Joi.string().max(2000).allow("", null),
+};
+
+// Inspection saisie dans l'application mobile. L'id (UUID) est choisi par l'application.
+export const inspectionSchema = Joi.object(inspectionFields);
+
+// Synchronisation d'un lot : chaque inspection précise sa ruche ; version n'est là que pour
+// une modification d'une inspection déjà synchronisée.
+export const syncSchema = Joi.object({
+  inspections: Joi.array()
+    .items(Joi.object({
+      ...inspectionFields,
+      hive_id: Joi.string().required(),
+      version: Joi.number().integer().min(1),
+    }))
+    .min(1)
+    .max(500)
+    .required(),
 });
 
 // --- Authentification ---

@@ -3,13 +3,7 @@ url: "{{baseUrl}}/api/auth/login"
 method: POST
 body:
   type: json
-  content: "{\r
-
-    \  \"email\": \"api1.sn-casa@queenbee.test\",\r
-
-    \  \"password\": \"QueenBee2026!\"\r
-
-    }\r\n"
+  content: "{\"email\":\"api1.sn-casa@queenbee.test\",\"password\":\"QueenBee2026!\"}\r\n"
 scripts:
   - type: beforeRequest
     code: ""

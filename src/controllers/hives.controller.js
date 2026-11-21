@@ -11,9 +11,10 @@ export function createHivesController({ hivesService, measuresService, inspectio
       res.json(await hivesService.getHive(req.user, req.params.id));
     },
 
+    // 201 si la mesure vient d'être créée, 200 si elle avait déjà été reçue (rejeu).
     async addMeasure(req, res) {
-      const measure = await measuresService.addMeasure(req.user, req.params.id, req.validated);
-      res.status(201).json(measure);
+      const { measure, created } = await measuresService.addMeasure(req.user, req.params.id, req.validated);
+      res.status(created ? 201 : 200).json(measure);
     },
 
     async listMeasures(req, res) {
@@ -25,9 +26,10 @@ export function createHivesController({ hivesService, measuresService, inspectio
       res.json({ items });
     },
 
+    // 201 si l'inspection vient d'être créée, 200 si elle avait déjà été reçue (rejeu).
     async addInspection(req, res) {
-      const inspection = await inspectionsService.addInspection(req.user, req.params.id, req.validated);
-      res.status(201).json(inspection);
+      const { inspection, created } = await inspectionsService.addInspection(req.user, req.params.id, req.validated);
+      res.status(created ? 201 : 200).json(inspection);
     },
   };
 }

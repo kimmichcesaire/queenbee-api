@@ -1,35 +1,85 @@
-import { ValidationError, ConflictError } from "../errors.js";
+import { AppError, ConflictError, ValidationError } from "../errors.js";
 
+// Service des inspections. UUID, date, état de la colonie, types : vérifiés AVANT par le
+// schéma Joi. Le service garde les règles qui ont besoin du contexte.
 export function createInspectionsService({ hivesService, inspectionsRepository }) {
+  // L'inspection à enregistrer. L'auteur vient du jeton, jamais du corps.
+  function toInspection(user, hive, data) {
+    return {
+      id: data.id,
+      hive_id: hive.id,
+      author_id: user.id,
+      inspected_at: data.inspected_at,
+      colony_status: data.colony_status,
+      queen_present: data.queen_present ?? null,
+      observations: data.observations ?? null,
+    };
+  }
+
+  // Traite UNE inspection du lot, sans jamais lever d'erreur métier : chaque élément reçoit
+  // son propre statut, et un élément refusé n'empêche pas les autres.
+  async function syncOne(user, item) {
+    try {
+      const hive = await hivesService.getHive(user, item.hive_id);
+      const inspection = toInspection(user, hive, item);
+
+      if (item.version === undefined) { // nouvelle inspection, saisie hors connexion
+        const { inspection: stored, created } = await inspectionsRepository.insertIfAbsent(inspection);
+        if (created) return { id: item.id, status: "created", version: stored.version };
+        if (stored.hive_id !== hive.id) {
+          return { id: item.id, status: "rejected", detail: "Cet identifiant est déjà utilisé par une inspection d'une autre ruche." };
+        }
+        return { id: item.id, status: "unchanged", version: stored.version };
+      }
+
+      // Une version : modification. Règle retenue : le serveur l'emporte.
+      const updated = await inspectionsRepository.updateIfVersion(inspection, item.version);
+      if (updated) return { id: item.id, status: "updated", version: updated.version };
+
+      const current = await inspectionsRepository.findById(item.id);
+      if (!current || current.hive_id !== hive.id) {
+        return { id: item.id, status: "rejected", detail: "Inspection inconnue pour cette ruche : envoyez-la sans version pour la créer." };
+      }
+      return {
+        id: item.id,
+        status: "conflict",
+        detail: `L'inspection a été modifiée entre-temps : version ${current.version} sur le serveur, ${item.version} sur l'appareil.`,
+        current,
+      };
+    } catch (err) {
+      if (err instanceof AppError) return { id: item.id, status: "rejected", detail: err.message };
+      throw err; // toute autre erreur est un bug
+    }
+  }
+
   return {
     async listInspections(user, hiveId) {
       await hivesService.getHive(user, hiveId);
       return inspectionsRepository.findByHive(hiveId);
     },
 
+    // Rejouable : un second envoi du même id sur la même ruche renvoie l'inspection existante.
     async addInspection(user, hiveId, data) {
       const hive = await hivesService.getHive(user, hiveId);
-
       if (data.hive_id !== undefined && data.hive_id !== hive.id) {
-        throw new ValidationError(
-          `Le hive_id du corps (${data.hive_id}) ne correspond pas à celui du chemin (${hive.id}).`
-        );
+        throw new ValidationError(`Le hive_id du corps (${data.hive_id}) ne correspond pas à la ruche ${hive.id}.`);
       }
-
-      // Double envoi de l'application mobile : on refuse le doublon.
-      if (await inspectionsRepository.findById(data.id)) {
-        throw new ConflictError(`Une inspection porte déjà l'identifiant ${data.id}.`);
+      const result = await inspectionsRepository.insertIfAbsent(toInspection(user, hive, data));
+      if (!result.created && result.inspection.hive_id !== hive.id) {
+        throw new ConflictError(`L'identifiant ${data.id} est déjà utilisé par une inspection d'une autre ruche.`);
       }
+      return result; // { inspection, created }
+    },
 
-      return inspectionsRepository.add({
-        id: data.id,
-        hive_id: hive.id,
-        author_id: user.id, 
-        inspected_at: data.inspected_at,
-        colony_status: data.colony_status,
-        queen_present: data.queen_present,
-        observations: data.observations,
-      });
+    // Synchronisation d'un lot : les inspections une par une, puis un résumé.
+    async syncInspections(user, items) {
+      const results = [];
+      for (const item of items) {
+        results.push(await syncOne(user, item));
+      }
+      const summary = { created: 0, unchanged: 0, updated: 0, conflict: 0, rejected: 0 };
+      for (const result of results) summary[result.status] += 1;
+      return { summary, results };
     },
   };
 }

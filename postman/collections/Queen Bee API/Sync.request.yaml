@@ -1,0 +1,73 @@
+$kind: http-request
+url: "{{baseUrl}}/api/inspections/sync"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"inspections\": [\r
+
+    \    {\r
+
+    \      \"id\": \"6f1d2c3a-1b2c-4d5e-8f60-0a1b2c3d4e01\",\r
+
+    \      \"hive_id\": \"SN-CASA-001\",\r
+
+    \      \"inspected_at\": \"2026-11-02T08:15:00Z\",\r
+
+    \      \"colony_status\": \"forte\",\r
+
+    \      \"queen_present\": true,\r
+
+    \      \"observations\": \"Cadres de couvain bien remplis\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"id\": \"6f1d2c3a-1b2c-4d5e-8f60-0a1b2c3d4e02\",\r
+
+    \      \"hive_id\": \"SN-CASA-002\",\r
+
+    \      \"inspected_at\": \"2026-11-02T08:40:00Z\",\r
+
+    \      \"colony_status\": \"normale\",\r
+
+    \      \"queen_present\": true,\r
+
+    \      \"observations\": null\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"id\": \"6f1d2c3a-1b2c-4d5e-8f60-0a1b2c3d4e03\",\r
+
+    \      \"hive_id\": \"SN-CASA-003\",\r
+
+    \      \"inspected_at\": \"2026-11-02T09:05:00Z\",\r
+
+    \      \"colony_status\": \"faible\",\r
+
+    \      \"queen_present\": false,\r
+
+    \      \"observations\": \"Reine introuvable, à revoir dans une semaine\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"id\": \"6f1d2c3a-1b2c-4d5e-8f60-0a1b2c3d4e04\",\r
+
+    \      \"hive_id\": \"SN-CASA-011\",\r
+
+    \      \"inspected_at\": \"2026-11-02T09:30:00Z\",\r
+
+    \      \"colony_status\": \"normale\"\r
+
+    \    }\r
+
+    \  ]\r
+
+    }\r\n"
+order: 31000

@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{baseUrl}}/api/inspections/sync"
+method: POST
+body:
+  type: json
+  content: "{\"inspections\":[]}\r\n"
+order: 32000

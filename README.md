@@ -1,6 +1,6 @@
 # Queen Bee — API
 
-API de suivi des ruches (module Node.js). État : **jour 2 en cours** (PostgreSQL, validation Joi, authentification JWT).
+API de suivi des ruches (module Node.js). État : **jour 2 terminé** (PostgreSQL, validation Joi, authentification JWT, synchronisation idempotente).
 
 ## Démarrage
 
@@ -25,13 +25,31 @@ src/
   app.js, server.js, config.js, errors.js, db.js
   routes/                  routeurs : URL, verbe, intergiciels (auth, validation)
   controllers/             lit la requête, écrit la réponse
-  services/                règles métier, contrôle d'accès (canAccessHive), authentification
+  services/                règles métier, contrôle d'accès (canAccessHive), authentification, synchronisation
   repositories/postgres/   requêtes SQL paramétrées
   middlewares/             journal, authentification, validation Joi, erreurs RFC 9457
   validators/              schémas Joi et messages en français
-test/                      tests unitaires (services, schémas, contrôle d'accès)
+test/                      tests unitaires (services, schémas, contrôle d'accès, idempotence)
 scripts/                   import en masse (TP 5), vérifications (TP 6)
 ```
+
+## TP 8 — Synchronisation idempotente
+
+Une requête rejouée (réseau coupé, nouvel essai) ne crée jamais de doublon :
+
+| Requête                                   | 1er envoi | Envoi rejoué                     |
+|-------------------------------------------|-----------|----------------------------------|
+| `POST /api/hives/:id/measures`            | 201       | 200 (même ruche + même instant)  |
+| `POST /api/hives/:id/inspections`         | 201       | 200 (même id) ; 409 si l'id appartient à une autre ruche |
+| `POST /api/inspections/sync` (lot)        | `created` | `unchanged`                      |
+
+Le lot est traité élément par élément : une inspection refusée (`rejected`) n'empêche pas les autres d'être enregistrées.
+
+### Règle de conflit : le serveur l'emporte
+
+Chaque inspection porte une `version`, augmentée de 1 à chaque modification enregistrée.
+Une modification n'est appliquée que si la `version` envoyée par l'appareil est celle du serveur ; sinon, l'élément revient en `conflict` et rien n'est écrasé.
+La réponse contient alors la version du serveur (`current`) : l'appareil la reprend, et l'apiculteur refait sa modification dessus s'il le souhaite.
 
 ## TP 7 — Authentification et autorisation
 
@@ -107,4 +125,4 @@ Non, elle est même légèrement plus lente (327 ms contre 312 ms), à cause du 
 
 ### 3. Pourquoi l'effet est-il presque invisible avec le fichier d'une journée ?
 
-Le fichier est 30 fois plus petit. L'import bloquant ne dure qu'environ 26 ms, donc /ping attend juste que quelques millisecondes de plus que d'habitude. Le blocage existe toujours, mais il est trop court pour etre remarqué, il grandit avec la taille du fichier.
+Le fichier est 30 fois plus petit. L'import bloquant ne dure qu'environ 26 ms, donc /ping attend juste quelques millisecondes de plus que d'habitude. Le blocage existe toujours, mais il est trop court pour être remarqué : il grandit avec la taille du fichier.

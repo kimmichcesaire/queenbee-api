@@ -6,7 +6,7 @@ import { ValidationError, NotFoundError } from "../src/errors.js";
 // Ici, on teste ce qui a besoin du CONTEXTE (la ruche, l'utilisateur). Les plages et les
 // types sont testés dans validators.test.js, à travers le schéma Joi.
 
-// Les services reçoivent maintenant l'utilisateur en premier.
+// Les services reçoivent l'utilisateur en premier.
 const admin = { id: "u-admin", role: "admin", site_id: null };
 
 // Faux service des ruches : seule SN-CASA-001 existe.
@@ -17,14 +17,18 @@ const fakeHivesService = {
   },
 };
 
-// Faux repository : garde dans un tableau ce qu'on lui donne.
+// Faux repository : imite ON CONFLICT DO NOTHING (même ruche + même instant = déjà reçue).
 function createFakeMeasuresRepository() {
   const added = [];
   return {
     added,
     async add(measure) {
+      const existing = added.find((m) => m.hive_id === measure.hive_id && m.timestamp === measure.timestamp);
+      if (existing) {
+        return { measure: existing, created: false };
+      }
       added.push(measure);
-      return measure;
+      return { measure, created: true };
     },
     async findByHive() {
       return [];
@@ -38,11 +42,23 @@ test("enregistre une mesure valide", async () => {
   const measuresRepository = createFakeMeasuresRepository();
   const service = createMeasuresService({ hivesService: fakeHivesService, measuresRepository });
 
-  const measure = await service.addMeasure(admin, "SN-CASA-001", validMeasure);
+  const { measure, created } = await service.addMeasure(admin, "SN-CASA-001", validMeasure);
 
+  assert.equal(created, true);
   assert.equal(measuresRepository.added.length, 1);
   assert.equal(measure.hive_id, "SN-CASA-001");
   assert.equal(measure.weight_kg, 36.84);
+});
+
+test("une trame reçue deux fois n'est enregistrée qu'une fois", async () => {
+  const measuresRepository = createFakeMeasuresRepository();
+  const service = createMeasuresService({ hivesService: fakeHivesService, measuresRepository });
+
+  await service.addMeasure(admin, "SN-CASA-001", validMeasure);
+  const second = await service.addMeasure(admin, "SN-CASA-001", validMeasure);
+
+  assert.equal(second.created, false);
+  assert.equal(measuresRepository.added.length, 1);
 });
 
 test("refuse une trame qui désigne une autre ruche que le chemin", async () => {
