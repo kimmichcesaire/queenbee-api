@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{baseUrl}}/api/hives/SN-CASA-001/measures"
+method: GET
+body:
+  type: json
+  content: "{\"timestamp\":\"2026-11-03T09:00:00Z\",\"weight_kg\":36.8}\r\n"
+order: 28000

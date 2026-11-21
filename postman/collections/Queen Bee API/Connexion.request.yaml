@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/login"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"email\": \"api1.sn-casa@queenbee.test\",\r
+
+    \  \"password\": \"QueenBee2026!\"\r
+
+    }\r\n"
+scripts:
+  - type: beforeRequest
+    code: ""
+    language: text/javascript
+  - type: afterResponse
+    code: "// Seulement si la connexion a réussi : un échec ne doit pas effacer le jeton en cours.\r
+
+      if (pm.response.code === 200) {\r
+
+      \  pm.collectionVariables.set(\"token\", pm.response.json().access_token);\r
+
+      }\r\n"
+    language: text/javascript
+order: 22000

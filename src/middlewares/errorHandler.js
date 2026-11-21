@@ -11,6 +11,13 @@ export function notFoundHandler(req, res) {
 export function errorHandler(err, req, res, next) {
   // Nos erreurs : elles portent leur code HTTP.
   if (err instanceof AppError) {
+    // Journal des requêtes interdites : une ligne par refus (401 ou 403).
+    if (err.status === 401 || err.status === 403) {
+      console.warn(`[accès refusé] ${err.status} ${req.method} ${req.originalUrl} ip=${req.ip} utilisateur=${req.user?.id ?? "-"}`);
+    }
+    if (err.status === 401) {
+      res.set("WWW-Authenticate", 'Bearer realm="queenbee"'); // schéma attendu (RFC 6750)
+    }
     return sendProblem(res, err.status, err.message);
   }
 

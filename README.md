@@ -1,35 +1,62 @@
 # Queen Bee — API
 
-API de suivi des ruches (module Node.js). État : **jour 2 en cours** (données dans PostgreSQL).
+API de suivi des ruches (module Node.js). État : **jour 2 en cours** (PostgreSQL, validation Joi, authentification JWT).
 
 ## Démarrage
 
 ```powershell
 docker compose up -d                 # base PostgreSQL
-copy .env.example .env               # puis remplir les valeurs (DB_PASSWORD…)
+copy .env.example .env               # puis remplir : DB_PASSWORD, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
 npm install
 npm run dev                          # http://localhost:3000
 npm test                             # tests (node:test)
 ```
 
+Générer un secret JWT : `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"` (deux secrets différents).
+
 - Contrat de l'API : [docs/api.md](docs/api.md)
-- Collection Postman : `postman/collections/Queen Bee API/` (variable `baseUrl` = `http://localhost:3000`)
-- Stockage : `STORAGE=postgres` (par défaut) ou `STORAGE=memory` (ruches du jour 1) dans `.env`
+- Collection Postman : `postman/collections/Queen Bee API/` (variable `baseUrl` = `http://localhost:3000` ; la requête « Connexion » range le jeton dans la variable `token`)
+- Comptes de démonstration (base locale uniquement) : `admin@queenbee.test`, `gestion@queenbee.test`, `coord.sn-casa@queenbee.test`, `api1.sn-casa@queenbee.test`
 
 ## Organisation du code
 
 ```
 src/
   app.js, server.js, config.js, errors.js, db.js
-  routes/hives/            routeur : URL et verbe
+  routes/                  routeurs : URL, verbe, intergiciels (auth, validation)
   controllers/             lit la requête, écrit la réponse
-  services/                règles métier (validation, plages physiques)
-  repositories/memory/     données en mémoire (jour 1)
-  repositories/postgres/   requêtes SQL paramétrées (jour 2)
-  middlewares/             journal des requêtes, erreurs RFC 9457
-  utils/problem.js         format d'erreur RFC 9457
-test/                      tests unitaires des services
-scripts/import-measures.js import en masse (TP 5)
+  services/                règles métier, contrôle d'accès (canAccessHive), authentification
+  repositories/postgres/   requêtes SQL paramétrées
+  middlewares/             journal, authentification, validation Joi, erreurs RFC 9457
+  validators/              schémas Joi et messages en français
+test/                      tests unitaires (services, schémas, contrôle d'accès)
+scripts/                   import en masse (TP 5), vérifications (TP 6)
+```
+
+## TP 7 — Authentification et autorisation
+
+| Rôle         | Ruches visibles      | Peut envoyer                 |
+|--------------|----------------------|------------------------------|
+| admin        | toutes               | des mesures, des comptes     |
+| gestionnaire | toutes               | rien                         |
+| coordinateur | celles de son site   | des inspections              |
+| apiculteur   | les siennes          | des inspections              |
+
+Une ruche inexistante renvoie 404 ; une ruche existante mais hors des droits renvoie 403. Un compte est bloqué 15 minutes après 5 mots de passe faux.
+
+### Journal des requêtes interdites
+
+| Requête interdite      | Connecté en                  | Requête                                                   | Code attendu | Code obtenu |
+|------------------------|------------------------------|-----------------------------------------------------------|--------------|-------------|
+| Ressource d'un autre site | coord.sn-casa@queenbee.test | `GET /api/hives?site_id=CI-AGBO`                          | 403          | 403 « Vous n'avez pas accès au site CI-AGBO. » |
+| Rôle insuffisant       | api1.sn-casa@queenbee.test   | `POST /api/hives/SN-CASA-001/measures`                    | 403          | 403 « Action réservée aux rôles suivants : admin. » |
+| Jeton expiré           | n'importe quel compte        | `GET /api/hives` avec `JWT_ACCESS_TTL=10s`, après 10 s    | 401          | 401 « Jeton d'accès invalide ou expiré. » |
+| Jeton falsifié         | n'importe quel compte        | `GET /api/hives` avec une lettre changée dans le jeton    | 401          | 401 « Jeton d'accès invalide ou expiré. » |
+
+Chaque refus est aussi tracé dans le terminal du serveur, par exemple :
+
+```
+[accès refusé] 403 POST /api/hives/SN-CASA-001/measures ip=::1 utilisateur=07aa8935-e6be-433f-8e5f-061113d4c7d3
 ```
 
 ## TP 5 — Brancher PostgreSQL

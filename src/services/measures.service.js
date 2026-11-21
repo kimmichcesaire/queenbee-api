@@ -1,9 +1,10 @@
 import { ValidationError } from "../errors.js";
 
+
 export function createMeasuresService({ hivesService, measuresRepository }) {
   return {
-    async add(hiveId, data) {
-      const hive = await hivesService.getById(hiveId);
+    async addMeasure(user, hiveId, data) {
+      const hive = await hivesService.getHive(user, hiveId); // 404 ou 403
 
       if (data.hive_id !== undefined && data.hive_id !== hive.id) {
         throw new ValidationError(
@@ -16,8 +17,8 @@ export function createMeasuresService({ hivesService, measuresRepository }) {
     },
 
     
-    async list(hiveId, { limit, offset }) {
-      await hivesService.getById(hiveId);
+    async listMeasures(user, hiveId, { limit, offset }) {
+      await hivesService.getHive(user, hiveId);
       const items = await measuresRepository.findByHive(hiveId, { limit, offset });
       return { items, limit, offset };
     },

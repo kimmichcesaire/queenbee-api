@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/register"
+method: POST
+body:
+  type: json
+  content: "{\"email\":\"test-blocage@queenbee.test\",\"password\":\"MotDePasseLong1!\",\"role\":\"gestionnaire\"}\r\n"
+order: 25000

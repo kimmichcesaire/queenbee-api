@@ -1,5 +1,4 @@
 const NODE_ENVS = ["development", "production", "test"];
-const STORAGES = ["postgres", "memory"];
 
 function fail(message) {
   console.error(`Configuration invalide : ${message}`);
@@ -16,6 +15,15 @@ function readInt(name, defaut, min, max) {
   return Number(raw);
 }
 
+// Lit une valeur obligatoire (un secret) : jamais de valeur par défaut.
+function readRequired(name) {
+  const value = process.env[name] ?? "";
+  if (value === "") {
+    fail(`${name} est obligatoire.`);
+  }
+  return value;
+}
+
 // PORT : entier de 1 à 65535, 3000 par défaut.
 const port = readInt("PORT", 3000, 1, 65535);
 
@@ -25,28 +33,32 @@ if (!NODE_ENVS.includes(nodeEnv)) {
   fail(`NODE_ENV doit valoir ${NODE_ENVS.join(", ")} (reçu : "${nodeEnv}").`);
 }
 
-// STORAGE : postgres (par défaut) ou memory.
-const storage = process.env.STORAGE ?? "postgres";
-if (!STORAGES.includes(storage)) {
-  fail(`STORAGE doit valoir ${STORAGES.join(" ou ")} (reçu : "${storage}").`);
-}
-
 // Base de données. Aucune valeur par défaut pour un mot de passe.
 const db = {
   host: process.env.DB_HOST ?? "localhost",
   port: readInt("DB_PORT", 5432, 1, 65535),
   user: process.env.DB_USER ?? "queenbee",
-  password: process.env.DB_PASSWORD ?? "",
+  password: readRequired("DB_PASSWORD"),
   database: process.env.DB_NAME ?? "queenbee",
   poolMax: readInt("DB_POOL_MAX", 10, 1, 100),
 };
-if (storage === "postgres" && db.password === "") {
-  fail("DB_PASSWORD est obligatoire quand STORAGE vaut postgres.");
+
+
+const auth = {
+  accessSecret: readRequired("JWT_ACCESS_SECRET"),
+  refreshSecret: readRequired("JWT_REFRESH_SECRET"),
+  accessTtl: process.env.JWT_ACCESS_TTL ?? "15m",
+  refreshTtl: process.env.JWT_REFRESH_TTL ?? "7d",
+  maxFailedLogins: 5,
+  lockMinutes: 15,
+};
+if (auth.accessSecret === auth.refreshSecret) {
+  fail("JWT_ACCESS_SECRET et JWT_REFRESH_SECRET doivent être différents.");
 }
 
 export const config = {
   port,
   nodeEnv,
-  storage,
   db,
+  auth,
 };

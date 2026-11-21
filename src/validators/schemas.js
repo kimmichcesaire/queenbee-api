@@ -1,5 +1,9 @@
 import Joi from "joi";
 
+// Un schéma Joi.object refuse tout champ qu'il ne déclare pas : un client ne peut donc pas
+// glisser un champ inattendu (par exemple un author_id dans une inspection).
+
+// GET /api/hives : ?site_id= facultatif. Vide (?site_id=) est accepté et ne filtre rien.
 export const hivesQuerySchema = Joi.object({
   site_id: Joi.string().allow(""),
 });
@@ -36,4 +40,30 @@ export const inspectionSchema = Joi.object({
   colony_status: Joi.string().valid(...COLONY_STATUSES).required(),
   queen_present: Joi.boolean().allow(null),
   observations: Joi.string().max(2000).allow("", null),
+});
+
+// --- Authentification ---
+
+// tlds: { allow: false } : sinon les adresses en .test du jeu de données seraient refusées.
+const email = Joi.string().email({ tlds: { allow: false } }).max(254);
+
+export const loginSchema = Joi.object({
+  email: email.required(),
+  password: Joi.string().required(),
+});
+
+export const refreshSchema = Joi.object({
+  refresh_token: Joi.string().required(),
+});
+
+// Création de compte (admin) : site_id est lié au rôle.
+export const registerSchema = Joi.object({
+  email: email.required(),
+  password: Joi.string().min(12).max(72).required(), // bcrypt ignore tout au-delà de 72 octets
+  role: Joi.string().valid("apiculteur", "coordinateur", "gestionnaire", "admin").required(),
+  site_id: Joi.when("role", {
+    is: Joi.valid("apiculteur", "coordinateur"),
+    then: Joi.string().required(),
+    otherwise: Joi.forbidden(),
+  }),
 });

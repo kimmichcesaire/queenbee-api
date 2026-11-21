@@ -1,0 +1,9 @@
+$kind: http-request
+url: "{{baseUrl}}/api/hives/SN-CASA-001/inspections"
+method: POST
+body:
+  type: json
+  content: "\r
+
+    {\"id\":\"{{$guid}}\",\"inspected_at\":\"2026-11-02T09:00:00Z\",\"colony_status\":\"forte\",\"author_id\":\"07aa8935-e6be-433f-8e5f-061113d4c7d3\"}\r\n"
+order: 24000
